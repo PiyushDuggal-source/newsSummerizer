@@ -2,44 +2,39 @@ from bs4 import BeautifulSoup
 import requests
 import streamlit as st
 import re
+import ollama
 
 sectionDict = [
     {
         "name": "Technology",
-        "url": "https://www.indianexpress.com/section/technology/",
-        "tag": "ul",
-        "tag_class": "article-list",
+        "url": "https://news.ycombinator.com/newest",
+        "tag": "span",
+        "tag_class" : "titleline"
     },
-    {
-        "name": "Education",
-        "url": "https://www.indianexpress.com/section/education/",
-        "tag": "div",
-        "tag_class": "nation",
-    },
-    {
-        "name": "Politics",
-        "url": "https://www.indianexpress.com/section/education/",
-        "tag": "div",
-        "tag_class": "nation",
-    },
+    # {
+    #     "name": "Technology",
+    #     "url": "https://www.indianexpress.com/section/technology/",
+    #     "tag": "ul",
+    #     "tag_class": "article-list",
+    # },
+    # {
+    #     "name": "Education",
+    #     "url": "https://www.indianexpress.com/section/education/",
+    #     "tag": "div",
+    #     "tag_class": "nation",
+    # },
+    # {
+    #     "name": "Politics",
+    #     "url": "https://www.indianexpress.com/section/education/",
+    #     "tag": "div",
+    #     "tag_class": "nation",
+    # },
 ]
 
-sections = ["technology", "education", "political-pulse"]
+sections = ["technology"]
 
 
-def get_text_from_tag(url, tag_name, tag_class=None):
-    """
-    Extracts text content from a specific tag on a website using BeautifulSoup.
-
-    Args:
-        url: The URL of the website to scrape.
-        tag_name: The name of the HTML tag to target (e.g., 'div').
-        tag_class: The optional class name attribute of the tag (e.g., 'top').
-
-    Returns:
-        A string containing the extracted text content from the specified tag.
-    """
-
+def get_text_from_tag(url):
     # Send an HTTP request to get the website content
     response = requests.get(url)
 
@@ -48,68 +43,68 @@ def get_text_from_tag(url, tag_name, tag_class=None):
         # Parse the HTML content
         soup = BeautifulSoup(response.content, "html.parser")
 
-        # Find the specific tag
-        if tag_class:
-            target_tag = soup.find(
-                tag_name, class_=tag_class
-            )  # Use class_ keyword argument
-        else:
-            target_tag = soup.find(tag_name)
+        rows = soup.find_all("tr", {"class": "athing"})
 
-        # Check if tag is found
-        if target_tag:
-            # Get all text content within the tag recursively (excluding comments and scripts)
-            text_content = target_tag.get_text(strip=True, separator="\n")
-            return text_content
-        else:
-            print(
-                f"Tag '{tag_name}' with class '{tag_class}' not found on the website."
-            )
-            return ""
-    else:
-        print(
-            f"Error: Failed to retrieve website content. Status code: {response.status_code}"
-        )
-        return ""
+        # List to store the extracted data
+        extracted_data = []
+
+        # Iterate over each row and extract rank, title, and site
+        for row in rows:
+            rank = row.find('span', class_='rank').get_text()
+            title = row.find('span', class_='titleline').a.get_text()
+            site = row.find('span', class_='titleline').a.get('href') if row.find('span', class_='sitestr') else 'N/A'
+
+            # Create a dictionary to store the extracted information
+            data = {
+                "Rank": rank,
+                "Title": title,
+                "Site": site
+            }
+
+            # Append the data to the list
+            extracted_data.append(data)
+        return extracted_data
+        
 
 
-def remove_date_string(text):
-    """
-    Removes a specific date-time format string from a text using regular expressions.
-
-    Args:
-        text: The string from which to remove the date-time string.
-
-    Returns:
-        A new string with the date-time string removed.
-
-    """
-    pattern1 = r"\b\w+ \d{1,2}, \d{4}  \d{2}:\d{2} IST\b"
-    pattern2 = r"\b\w+ \d{1,2}, \d{4} \d{2}:\d{2} IST\b"
-
-    # Remove all occurrences of the pattern
-    output_string = re.sub(pattern1, "", text)
-    output_string = re.sub(pattern2, "", output_string)
-
-    # Clean up any extra spaces
-    output_string = re.sub(" +", " ", output_string).strip()
-    return output_string
-
+# def remove_date_string(text):
+#     """
+#     Removes a specific date-time format string from a text using regular expressions.
+#
+#     Args:
+#         text: The string from which to remove the date-time string.
+#
+#     Returns:
+#         A new string with the date-time string removed.
+#
+#     """
+#     pattern1 = r"\b\w+ \d{1,2}, \d{4}  \d{2}:\d{2} IST\b"
+#     pattern2 = r"\b\w+ \d{1,2}, \d{4} \d{2}:\d{2} IST\b"
+#
+#     # Remove all occurrences of the pattern
+#     output_string = re.sub(pattern1, "", text)
+#     output_string = re.sub(pattern2, "", output_string)
+#
+#     # Clean up any extra spaces
+#     output_string = re.sub(" +", " ", output_string).strip()
+#     return output_string
+#
 
 dataList = []
 
-for i in range(len(sections)):
-    website_url = sectionDict[i]["url"]
-    tag_to_extract = sectionDict[i]["tag"]
-    tag_class_name = sectionDict[i]["tag_class"]
-    data = get_text_from_tag(website_url, tag_to_extract, tag_class_name)
-    if tag_class_name == "nation":
-        data = data[:-15]
+
+for diction in sectionDict:
+    website_url = diction["url"]
+    tag_to_extract = diction["tag"]
+    tag_class_name = diction["tag_class"]
+    data = get_text_from_tag(website_url)
+    # if tag_class_name == "nation":
+    #     data = data[:-15]
     dataList.append(data)
 
 
 for data in dataList:
-    print(remove_date_string(data))
+    print(data)
 
 
 # page = requests.get('https://indianexpress.com/')
@@ -120,3 +115,14 @@ for data in dataList:
 
 # for article in articles:
 #     print(article.text)
+
+while True:
+    text = input()
+    if text == "exit":
+        break
+
+    for part in ollama.generate(model="llama2-uncensored:latest",prompt=text,stream=True ):
+        print(part['response'], end='', flush=True)
+        print()
+
+    
