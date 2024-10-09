@@ -1,6 +1,7 @@
 from bs4 import BeautifulSoup
 import requests
 import streamlit as st
+import json
 import re
 import ollama
 
@@ -115,14 +116,20 @@ for data in dataList:
 
 # for article in articles:
 #     print(article.text)
+text = "can you understand this data given below? can you categories it? \n\n"
+
+json_mylist = json.dumps(dataList[0], separators=(',', ':'))
+text += json_mylist
 
 while True:
+    response = ollama.generate(model="llama3.2:latest",prompt=text )
+    print(response['response'])
+    # for part in ollama.generate(model="llama3.2:latest",prompt=text,stream=True ):
+    #     print(part['response'], end='', flush=True)
+    #     print()
+
     text = input()
     if text == "exit":
         break
-
-    for part in ollama.generate(model="llama2-uncensored:latest",prompt=text,stream=True ):
-        print(part['response'], end='', flush=True)
-        print()
 
     
